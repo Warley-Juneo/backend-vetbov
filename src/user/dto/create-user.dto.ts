@@ -8,7 +8,7 @@ import {
   Matches,
   MinLength,
 } from 'class-validator';
-import { UserStatus } from '@prisma/client';
+import { UserStatus, UserRole } from '@prisma/client';
 
 export class CreateUserDto {
   @IsString()
@@ -23,11 +23,10 @@ export class CreateUserDto {
   password: string;
 
   @IsOptional()
-  @IsString()
-  @Matches(/^(admin|manager|vet|farmer)$/, {
-    message: 'Função inválida. Valores permitidos: admin, manager, vet, farmer',
+  @IsEnum(UserRole, {
+    message: `Função inválida. Use: ${Object.values(UserRole).join(', ')}`,
   })
-  role: string;
+  role?: UserRole;
 
   @IsOptional()
   @IsEnum(UserStatus, {
@@ -35,3 +34,5 @@ export class CreateUserDto {
   })
   status?: UserStatus;
 }
+
+
