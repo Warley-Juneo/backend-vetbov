@@ -49,16 +49,16 @@ export class UserRepository {
     });
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
+  async update(email: string, updateUserDto: UpdateUserDto) {
     return this.prisma.user.update({
-      where: { id },
+      where: { email },
       data: updateUserDto,
     });
   }
 
-  async delete(id: string) {
+  async delete(email: string) {
     return this.prisma.user.update({
-      where: { id },
+      where: { email },
       data: {
         status: UserStatus.INACTIVE,
         deletedAt: new Date(),

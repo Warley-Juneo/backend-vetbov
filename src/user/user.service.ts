@@ -3,6 +3,8 @@ import {
   ConflictException,
   Injectable,
   UnauthorizedException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { UserRepository } from 'src/user/user.repository';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
@@ -11,11 +13,22 @@ import { UserStatus, UserRole } from '@prisma/client';
 import { LoginDto } from './dto/login.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
+import { AuthService } from 'src/auth/auth.service';
+import { AuthResponse } from 'src/interfaces/auth.interface';
 
 @Injectable()
 export class UserService {
-  constructor(private userRepository: UserRepository) {}
+  constructor(
+    private userRepository: UserRepository,
+    private jwtService: JwtService,
+    @Inject(forwardRef(() => AuthService))
+    private authService: AuthService,
+  ) {}
 
+  /**
+   * Busca todos os usuários com paginação
+   */
   async findAll(pagination: { page: number; limit: number }, filters?: any) {
     const result = await this.userRepository.findAll({
       page: pagination.page,
@@ -33,7 +46,10 @@ export class UserService {
     };
   }
 
-  async create(createUserDto: CreateUserDto) {
+  /**
+   * Cria um novo usuário
+   */
+  async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
     const existingUser = await this.userRepository.findByEmail(
       createUserDto.email,
     );
@@ -60,14 +76,23 @@ export class UserService {
     return result as UserResponseDto;
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto) {
-    return this.userRepository.update(id, updateUserDto);
+  /**
+   * Atualiza um usuário existente
+   */
+  async update(email: string, updateUserDto: UpdateUserDto) {
+    return this.userRepository.update(email, updateUserDto);
   }
 
-  async delete(id: string) {
-    return this.userRepository.delete(id);
+  /**
+   * Marca um usuário como excluído (soft delete)
+   */
+  async delete(email: string) {
+    return this.userRepository.delete(email);
   }
 
+  /**
+   * Busca um usuário pelo email, excluindo a senha do resultado
+   */
   async findByEmail(email: string): Promise<UserResponseDto> {
     const user = await this.userRepository.findByEmail(email);
     if (!user) return null;
@@ -76,20 +101,55 @@ export class UserService {
     return result as UserResponseDto;
   }
 
-  async login(loginDto: LoginDto): Promise<UserResponseDto> {
-    const user = await this.userRepository.findByEmail(loginDto.email);
+  /**
+   * Método que retorna o usuário com a senha, para fins de autenticação
+   * @internal - Usado apenas para autenticação
+   */
+  async findByEmailWithPassword(email: string): Promise<any> {
+    return this.userRepository.findByEmail(email);
+  }
+
+  /**
+   * Realiza o login do usuário delegando para o AuthService
+   */
+  async login(loginDto: LoginDto): Promise<AuthResponse> {
+    return this.authService.login(loginDto);
+  }
+
+  /**
+   * Registra um novo usuário delegando para o AuthService
+   */
+  async register(createUserDto: CreateUserDto): Promise<AuthResponse> {
+    return this.authService.register(createUserDto);
+  }
+
+  /**
+   * Verifica a validade de um token JWT delegando para o AuthService
+   */
+  async verifyToken(token: string): Promise<{ valid: boolean; user?: any }> {
+    return this.authService.verifyToken(token);
+  }
+
+  /**
+   * Altera a senha do usuário
+   */
+  async changePassword(email: string, currentPassword: string, newPassword: string) {
+    const user = await this.findByEmailWithPassword(email);
     
     if (!user) {
-      throw new UnauthorizedException('Credenciais inválidas');
+      throw new UnauthorizedException('Usuário não encontrado');
     }
-
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+    
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
     
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Credenciais inválidas');
+      throw new UnauthorizedException('Senha atual incorreta');
     }
-
-    const { password, ...result } = user;
-    return result as UserResponseDto;
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    await this.userRepository.update(email, { password: hashedPassword });
+    
+    return { message: 'Senha alterada com sucesso' };
   }
 }

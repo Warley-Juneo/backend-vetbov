@@ -19,6 +19,29 @@ enum UserRole {
   USER
 }
 
+enum CattleStatus {
+  PARIDA
+  SOLTEIRA
+  GESTANTE
+  DESCARTE
+}
+
+enum ProtocolType {
+  D0
+  D8
+  D11
+  DG
+}
+
+enum ProtocolResult {
+  GESTANTE
+  NAO_GESTANTE
+  PARIDA
+  SOLTEIRA
+  DESCARTE
+  EM_ANDAMENTO
+}
+
 model User {
   id        String     @id @default(uuid())
   email     String     @unique @map("email")
@@ -31,4 +54,68 @@ model User {
   deletedAt DateTime?
 
   @@map("users")
+}
+
+model Farm {
+  id          String    @id @default(uuid())
+  name        String
+  address     String?
+  city        String?
+  state       String?
+  postalCode  String?
+  country     String?
+  phone       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  
+  owner       String?
+  
+  animals     Animal[]
+  protocols   Protocol[]
+
+  @@map("farms")
+}
+
+model Animal {
+  id            String        @id @default(uuid())
+  identifier    String        // Código ou brinco de identificação
+  breed         String?       // Raça
+  birthDate     DateTime?
+  weight        Float?
+  cattleStatus  CattleStatus  @default(SOLTEIRA)
+  observations  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+  
+  farm          Farm          @relation(fields: [farmId], references: [id])
+  farmId        String
+
+  protocols     Protocol[]
+
+  @@map("animals")
+}
+
+model Protocol {
+  id              String          @id @default(uuid())
+  date            DateTime        // Data do protocolo/visita
+  type            ProtocolType    // Tipo de protocolo (D0, D8, D11, DG)
+  technician      String?         // Nome do técnico responsável
+  observations    String?         // Observações gerais
+  result          ProtocolResult? // Resultado do protocolo
+  presence        Boolean         @default(true) // Presença confirmada
+  cycleId         String?         // Identificador do ciclo para agrupar protocolos
+  nextProtocolDate DateTime?      // Data prevista para o próximo protocolo
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  deletedAt       DateTime?
+  
+  animal          Animal          @relation(fields: [animalId], references: [id])
+  animalId        String
+  
+  farm            Farm            @relation(fields: [farmId], references: [id])
+  farmId          String
+
+  @@map("protocols")
 }
