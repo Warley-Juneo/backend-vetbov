@@ -32,7 +32,13 @@ export class CreateUserDto {
   @IsEnum(UserStatus, {
     message: `Status inválido. Use: ${Object.values(UserStatus).join(', ')}`,
   })
+
+  @IsOptional()
+  @IsString()
   status?: UserStatus;
+
+  @IsString()
+  organizationId: string;
 }
 
 

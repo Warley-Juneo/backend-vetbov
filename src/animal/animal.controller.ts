@@ -36,7 +36,6 @@ export class AnimalController {
 
   @Post()
   create(@Body() createAnimalDto: CreateAnimalDto) {
-    console.log('createAnimalDto', createAnimalDto);
     return this.animalService.create(createAnimalDto);
   }
 

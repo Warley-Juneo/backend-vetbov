@@ -2,6 +2,7 @@ import { Controller, Post, Body, HttpCode, HttpStatus, Get, Headers } from '@nes
 import { AuthService } from './auth.service';
 import { LoginDto } from 'src/user/dto/login.dto';
 import { CreateUserDto } from 'src/user/dto/create-user.dto';
+import { UserStatus } from '@prisma/client';
 
 @Controller('auth')
 export class AuthController {
@@ -15,6 +16,7 @@ export class AuthController {
 
   @Post('register')
   register(@Body() createUserDto: CreateUserDto) {
+    createUserDto.status = UserStatus.ACTIVE;
     return this.authService.register(createUserDto);
   }
 

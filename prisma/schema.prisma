@@ -22,18 +22,27 @@ enum UserRole {
 enum CattleStatus {
   PARIDA
   SOLTEIRA
-  GESTANTE
-  DESCARTE
+  NOVILHA
+  LACTANTE
 }
 
-enum ProtocolType {
+enum Avaliacao {
+  CICLICANDO
+  NAO_CICLANDO
+  SUSPEITA
+  DESCARTE
+  ATRASADA
+  GESTANTE
+}
+
+enum ManejoType {
   D0
   D8
   D11
   DG
 }
 
-enum ProtocolResult {
+enum ManejoResult {
   GESTANTE
   NAO_GESTANTE
   PARIDA
@@ -42,16 +51,33 @@ enum ProtocolResult {
   EM_ANDAMENTO
 }
 
+model Organization {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  
+  users       User[]
+  farms       Farm[]    // Organização possui fazendas
+
+  @@map("organizations")
+}
+
 model User {
-  id        String     @id @default(uuid())
-  email     String     @unique @map("email")
-  name      String?
-  password  String     @map("password")
-  role      UserRole   @default(USER)
-  status    UserStatus @default(ACTIVE)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  deletedAt DateTime?
+  id              String     @id @default(uuid())
+  email           String     @unique @map("email")
+  name            String?
+  password        String     @map("password")
+  role            UserRole   @default(USER)
+  status          UserStatus @default(ACTIVE)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  deletedAt       DateTime?
+  
+  organizationId  String?
+  organization    Organization? @relation(fields: [organizationId], references: [id])
 
   @@map("users")
 }
@@ -69,10 +95,14 @@ model Farm {
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
   
-  owner       String?
+  owner       String?   // Nome do proprietário da fazenda (campo informativo)
+  
+  organizationId String
+  organization  Organization @relation(fields: [organizationId], references: [id])
   
   animals     Animal[]
-  protocols   Protocol[]
+  Manejos     Manejo[]
+  cycles      Cycle[]
 
   @@map("farms")
 }
@@ -84,7 +114,9 @@ model Animal {
   birthDate     DateTime?
   weight        Float?
   cattleStatus  CattleStatus  @default(SOLTEIRA)
-  observations  String?
+  avaliacao     Avaliacao?
+  gestationalAge Int?         // Idade gestacional em dias
+  observation   String?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   deletedAt     DateTime?
@@ -92,30 +124,46 @@ model Animal {
   farm          Farm          @relation(fields: [farmId], references: [id])
   farmId        String
 
-  protocols     Protocol[]
+  manejos     Manejo[]
 
   @@map("animals")
 }
 
-model Protocol {
+model Cycle {
+  id          String    @id @default(uuid())
+  farmId      String
+  farm        Farm      @relation(fields: [farmId], references: [id])
+  name        String?
+  startDate   DateTime
+  endDate     DateTime?
+  status      String    @default("EM_ANDAMENTO") // EM_ANDAMENTO, CONCLUIDO
+  technician  String?
+  manejos     Manejo[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@map("cycles")
+}
+
+model Manejo {
   id              String          @id @default(uuid())
-  date            DateTime        // Data do protocolo/visita
-  type            ProtocolType    // Tipo de protocolo (D0, D8, D11, DG)
+  date            DateTime        // Data do Manejoo/visita
+  type            ManejoType      // Tipo de Manejoo (D0, D8, D11, DG)
   technician      String?         // Nome do técnico responsável
-  observations    String?         // Observações gerais
-  result          ProtocolResult? // Resultado do protocolo
+  result          ManejoResult?   // Resultado do Manejoo
   presence        Boolean         @default(true) // Presença confirmada
-  cycleId         String?         // Identificador do ciclo para agrupar protocolos
-  nextProtocolDate DateTime?      // Data prevista para o próximo protocolo
+  cycleId         String          // Identificador do ciclo para agrupar Manejoos
+  cycle           Cycle           @relation(fields: [cycleId], references: [id])
+  nextManejoDate  DateTime?       // Data prevista para o próximo Manejoo
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   deletedAt       DateTime?
   
-  animal          Animal          @relation(fields: [animalId], references: [id])
-  animalId        String
+  animals          Animal[]
   
   farm            Farm            @relation(fields: [farmId], references: [id])
   farmId          String
 
-  @@map("protocols")
+  @@map("Manejos")
 }

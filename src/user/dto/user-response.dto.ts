@@ -4,6 +4,7 @@ export class UserResponseDto {
   email: string;
   role: string;
   status: string;
+  organizationId: string;
   createdAt: Date;
   updatedAt: Date;
 } 

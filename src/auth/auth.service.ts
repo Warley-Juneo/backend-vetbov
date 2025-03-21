@@ -42,7 +42,8 @@ export class AuthService {
       sub: user.id, 
       email: user.email,
       name: user.name,
-      role: user.role 
+      role: user.role,
+      organizationId: user.organizationId 
     };
     
     return {
@@ -50,7 +51,8 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        organizationId: user.organizationId
       },
       token: this.jwtService.sign(payload),
     };

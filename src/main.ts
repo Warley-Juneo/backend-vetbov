@@ -29,7 +29,6 @@ async function bootstrap() {
   });
 
   const port = configService.get<number>('PORT') || 3001;
-  console.log(`Aplicação rodando na porta ${port}`);
   await app.listen(port);
 }
 bootstrap();

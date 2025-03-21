@@ -8,6 +8,7 @@ export class User {
   password: string;
   role: string;
   status: UserStatus;
+  organizationId: string;
   createdAt: Date;
   updatedAt: Date;
   deletedAt?: Date;

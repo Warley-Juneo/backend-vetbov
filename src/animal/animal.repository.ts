@@ -7,6 +7,16 @@ import { UpdateAnimalDto } from './dto/update-animal.dto';
 export class AnimalRepository {
   constructor(private prisma: PrismaService) {}
 
+  // Constante reutilizável para incluir a fazenda com campos selecionados
+  private readonly farmInclude = {
+    farm: {
+      select: {
+        id: true,
+        name: true,
+      },
+    },
+  };
+
   async findAll(params: {
     skip?: number;
     take?: number;
@@ -23,14 +33,7 @@ export class AnimalRepository {
         skip,
         take,
         where,
-        include: {
-          farm: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
+        include: this.farmInclude,
         orderBy: {
           createdAt: 'desc',
         },
@@ -45,52 +48,59 @@ export class AnimalRepository {
   }
 
   async findById(id: string) {
-    return this.prisma.animal.findUnique({
-      where: { id },
-      include: {
-        farm: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+    return this.prisma.animal.findFirst({
+      where: { 
+        id,
+        deletedAt: null 
       },
+      include: this.farmInclude,
     });
   }
 
   async create(data: CreateAnimalDto) {
+    const { farmId, ...animalData } = data;
+    
+    // Utilizando o padrão "connect" do Prisma para garantir que a fazenda existe
     return this.prisma.animal.create({
-      data,
-      include: {
+      data: {
+        ...animalData,
         farm: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+          connect: {
+            id: farmId
+          }
+        }
       },
+      include: this.farmInclude,
     });
   }
 
   async update(id: string, data: UpdateAnimalDto) {
+    // Primeiro verificamos se o animal existe e não está deletado
+    const animal = await this.findById(id);
+    
+    if (!animal) {
+      return null; // Animal não existe ou já está deletado
+    }
+    
     return this.prisma.animal.update({
       where: { id },
       data,
-      include: {
-        farm: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
+      include: this.farmInclude,
     });
   }
 
   async delete(id: string) {
+    // Primeiro verificamos se o animal existe e não está deletado
+    const animal = await this.findById(id);
+    
+    if (!animal) {
+      return null; // Animal não existe ou já está deletado
+    }
+    
     return this.prisma.animal.update({
       where: { id },
       data: { deletedAt: new Date() },
+      include: this.farmInclude,
     });
   }
 } 

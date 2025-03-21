@@ -3,17 +3,23 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateFarmDto } from './dto/create-farm.dto';
 import { UpdateFarmDto } from './dto/update-farm.dto';
 import { Farm } from '@prisma/client';
-import { PaginatedResult, PaginationParams } from 'src/common/interfaces';
 
 @Injectable()
 export class FarmRepository {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Busca todas as fazendas com paginação
+   * Busca todas as fazendas com paginação e filtro por organização
    */
-  async findAll(params: PaginationParams): Promise<PaginatedResult<Farm>> {
-    const { skip, take, page, limit, orderBy = { createdAt: 'desc' } } = params;
+  async findAll(params: any): Promise<Farm[]> {
+    const { 
+      skip, 
+      take, 
+      page, 
+      limit, 
+      orderBy = { createdAt: 'desc' },
+      organizationId 
+    } = params;
     
     // Converter page/limit para skip/take se fornecidos
     const skipValue = skip ?? (page && limit ? (page - 1) * limit : undefined);
@@ -22,6 +28,11 @@ export class FarmRepository {
     const where = { 
       deletedAt: null,
     };
+
+    // Adiciona filtro por organização se fornecido
+    if (organizationId) {
+      where['organizationId'] = organizationId;
+    }
 
     const [farms, total] = await Promise.all([
       this.prisma.farm.findMany({
@@ -33,7 +44,7 @@ export class FarmRepository {
       this.prisma.farm.count({ where }),
     ]);
 
-    const result: PaginatedResult<Farm> = {
+    const result: any = {
       data: farms,
       total,
     };
@@ -51,9 +62,19 @@ export class FarmRepository {
   /**
    * Busca uma fazenda pelo ID
    */
-  async findById(id: string): Promise<Farm | null> {
-    return this.prisma.farm.findUnique({
-      where: { id },
+  async findById(id: string, organizationId?: string): Promise<Farm | null> {
+    const where = { 
+      id,
+      deletedAt: null,
+    };
+
+    // Adiciona filtro de organização se fornecido
+    if (organizationId) {
+      where['organizationId'] = organizationId;
+    }
+
+    return this.prisma.farm.findFirst({
+      where
     });
   }
 
@@ -61,28 +82,61 @@ export class FarmRepository {
    * Cria uma nova fazenda
    */
   async create(data: CreateFarmDto): Promise<Farm> {
+    // Extrair organizationId do DTO
+    const { organizationId, ...farmData } = data;
+    
+    // Usar relation connect para associar à organização
     return this.prisma.farm.create({
-      data,
+      data: {
+        ...farmData,
+        organization: {
+          connect: {
+            id: organizationId
+          }
+        }
+      }
     });
   }
 
   /**
-   * Atualiza uma fazenda existente
+   * Atualiza uma fazenda
    */
-  async update(id: string, data: UpdateFarmDto): Promise<Farm> {
+  async update(id: string, data: UpdateFarmDto, organizationId?: string): Promise<Farm> {
+    const where = { 
+      id,
+      deletedAt: null 
+    };
+
+    // Adiciona filtro de organização se fornecido
+    if (organizationId) {
+      where['organizationId'] = organizationId;
+    }
+
     return this.prisma.farm.update({
-      where: { id },
-      data,
+      where,
+      data
     });
   }
 
   /**
-   * Marca uma fazenda como excluída (soft delete)
+   * Exclui logicamente uma fazenda
    */
-  async delete(id: string): Promise<Farm> {
+  async delete(id: string, organizationId?: string): Promise<Farm> {
+    const where = { 
+      id,
+      deletedAt: null 
+    };
+
+    // Adiciona filtro de organização se fornecido
+    if (organizationId) {
+      where['organizationId'] = organizationId;
+    }
+
     return this.prisma.farm.update({
-      where: { id },
-      data: { deletedAt: new Date() },
+      where,
+      data: {
+        deletedAt: new Date()
+      }
     });
   }
 } 

@@ -50,18 +50,6 @@ export class UserController {
     return this.usersService.findByEmail(email);
   }
 
-  @Post('login')
-  @HttpCode(HttpStatus.OK)
-  login(@Body() loginDto: LoginDto) {
-    return this.usersService.login(loginDto);
-  }
-
-  @Post('register')
-  register(@Body() createUserDto: CreateUserDto) {
-    createUserDto.status = UserStatus.ACTIVE;
-    return this.usersService.register(createUserDto);
-  }
-
   @Post()
   create(@Body() createUserDto: CreateUserDto): Promise<UserResponseDto> {
     createUserDto.status = UserStatus.ACTIVE;

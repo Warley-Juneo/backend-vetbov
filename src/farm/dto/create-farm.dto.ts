@@ -31,4 +31,7 @@ export class CreateFarmDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @IsString()
+  organizationId?: string;
 } 
